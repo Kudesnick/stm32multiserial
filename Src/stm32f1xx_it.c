@@ -36,8 +36,7 @@
 #include "stm32f1xx_it.h"
 
 /* USER CODE BEGIN 0 */
-#include "usart.h"
-#include "stm32f1xx_ll_usart.h"
+
 /* USER CODE END 0 */
 
 /* External variables --------------------------------------------------------*/
@@ -72,6 +71,8 @@ void HardFault_Handler(void)
   /* USER CODE END HardFault_IRQn 0 */
   while (1)
   {
+    /* USER CODE BEGIN W1_HardFault_IRQn 0 */
+    /* USER CODE END W1_HardFault_IRQn 0 */
   }
   /* USER CODE BEGIN HardFault_IRQn 1 */
 
@@ -88,6 +89,8 @@ void MemManage_Handler(void)
   /* USER CODE END MemoryManagement_IRQn 0 */
   while (1)
   {
+    /* USER CODE BEGIN W1_MemoryManagement_IRQn 0 */
+    /* USER CODE END W1_MemoryManagement_IRQn 0 */
   }
   /* USER CODE BEGIN MemoryManagement_IRQn 1 */
 
@@ -104,6 +107,8 @@ void BusFault_Handler(void)
   /* USER CODE END BusFault_IRQn 0 */
   while (1)
   {
+    /* USER CODE BEGIN W1_BusFault_IRQn 0 */
+    /* USER CODE END W1_BusFault_IRQn 0 */
   }
   /* USER CODE BEGIN BusFault_IRQn 1 */
 
@@ -120,6 +125,8 @@ void UsageFault_Handler(void)
   /* USER CODE END UsageFault_IRQn 0 */
   while (1)
   {
+    /* USER CODE BEGIN W1_UsageFault_IRQn 0 */
+    /* USER CODE END W1_UsageFault_IRQn 0 */
   }
   /* USER CODE BEGIN UsageFault_IRQn 1 */
 
@@ -230,47 +237,6 @@ void USB_LP_CAN1_RX0_IRQHandler(void)
 }
 
 /* USER CODE BEGIN 1 */
-extern t_ring uart2cdc[];
 
-void UART_CharReception_Callback(UART_HandleTypeDef *huart) {
-  ring_put_byte(&uart2cdc[usart2idx(huart)], LL_USART_ReceiveData8(huart->Instance));
-}
-
-void UART_Error_Callback(UART_HandleTypeDef *huart, IRQn_Type IRQn) {
-    __IO uint32_t sr_reg;
-
-  /* Disable USARTx_IRQn */
-  NVIC_DisableIRQ(IRQn);
-
-  /* Error handling example :
-    - Read USART SR register to identify flag that leads to IT raising
-    - Perform corresponding error handling treatment according to flag
-  */
-  sr_reg = LL_USART_ReadReg(huart->Instance, SR);
-}
-
-void usart_irq_handler(UART_HandleTypeDef *huart, IRQn_Type IRQn) {
-
-  if(LL_USART_IsActiveFlag_RXNE(huart->Instance) && LL_USART_IsEnabledIT_RXNE(huart->Instance))
-  {
-    /* RXNE flag will be cleared by reading of DR register (done in call) */
-    /* Call function in charge of handling Character reception */
-    UART_CharReception_Callback(huart);
-  }
-
-  if(LL_USART_IsEnabledIT_ERROR(huart->Instance) && LL_USART_IsActiveFlag_NE(huart->Instance))
-  {
-    /* Call Error function */
-    UART_Error_Callback(huart, IRQn);
-  }
-}
-
-void USART1_IRQHandler(void) {
-  usart_irq_handler(&huart1,USART1_IRQn);
-}
-
-void USART2_IRQHandler(void) {
-  usart_irq_handler(&huart2,USART2_IRQn);
-}
 /* USER CODE END 1 */
 /************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/

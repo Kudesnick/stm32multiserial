@@ -54,7 +54,7 @@
 #include "gpio.h"
 
 /* USER CODE BEGIN Includes */
-#include <usbd_cdc_if.h>
+
 /* USER CODE END Includes */
 
 /* Private variables ---------------------------------------------------------*/
@@ -73,68 +73,7 @@ void SystemClock_Config(void);
 /* USER CODE END PFP */
 
 /* USER CODE BEGIN 0 */
-t_ring uart2cdc[CDC_NUM];
-t_ring cdc2uart[CDC_NUM];
 
-void ring_put_byte(t_ring *ring, uint8_t data) {
-  ring->data[ring->w_pos] = data;
-  ring->w_pos++;
-  ring->w_pos = ring->w_pos % RING_BUF_SIZE;
-}
-
-uint8_t* ring_get_byte(t_ring *ring) {
-  if (ring->w_pos == ring->r_pos) return 0;
-  uint8_t *ret = ring->data+ring->r_pos;
-  ring->r_pos++;
-  ring->r_pos = ring->r_pos % RING_BUF_SIZE;
-  return ret;
-}
-
-void ring_put_data(t_ring *ring, uint8_t *data, uint16_t size) {
-  if (size > RING_BUF_SIZE) {
-    data = data+(size-RING_BUF_SIZE);
-    size = RING_BUF_SIZE;
-  }
-  for (int i = 0; i < size; i++) {
-    ring_put_byte(ring, data[i]);
-  }
-}
-
-uint16_t ring_get_data(t_ring *ring, uint8_t *data, uint16_t size) {
-  if (size > RING_BUF_SIZE) size = RING_BUF_SIZE;
-  uint8_t *data_byte;
-  for (int i = 0; i < size; i++) {
-    data_byte = ring_get_byte(ring);
-    if (data_byte == 0) return i;
-    data[i] = *data_byte;
-  }
-  return size;
-}
-
-uint8_t uart2cdc_buff[CDC_NUM][RING_BUF_SIZE];
-uint8_t cdc2uart_buff[CDC_NUM][RING_BUF_SIZE];
-
-void uart_tick(void) {
-
-  uint16_t data_len;
-  for (int i=0;i<CDC_NUM;i++){
-
-    // uart to cdc
-    if (CDC_Transmit_Ready(i)) {
-      data_len = ring_get_data(&uart2cdc[i], uart2cdc_buff[i], RING_BUF_SIZE);
-      if (data_len) {
-        CDC_Transmit_FS(i,uart2cdc_buff[i],data_len);
-      }
-    }
-
-    // cdc to uart
-    data_len = ring_get_data(&cdc2uart[i], cdc2uart_buff[i], RING_BUF_SIZE);
-    if (data_len) {
-      HAL_UART_Transmit(Index2Usart(i), cdc2uart_buff[i], data_len, data_len*2);
-    }
-
-  }
-}
 /* USER CODE END 0 */
 
 int main(void)
@@ -163,10 +102,10 @@ int main(void)
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
   MX_DMA_Init();
-  MX_USB_DEVICE_Init();
   MX_USART1_UART_Init();
   MX_USART2_UART_Init();
   MX_USART3_UART_Init();
+  MX_USB_DEVICE_Init();
 
   /* USER CODE BEGIN 2 */
 
@@ -179,7 +118,7 @@ int main(void)
   /* USER CODE END WHILE */
 
   /* USER CODE BEGIN 3 */
-    uart_tick();
+
   }
   /* USER CODE END 3 */
 

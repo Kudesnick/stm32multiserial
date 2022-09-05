@@ -49,7 +49,6 @@
 /* Includes ------------------------------------------------------------------*/
 #include "usbd_cdc_if.h"
 /* USER CODE BEGIN INCLUDE */
-#include "usart.h"
 /* USER CODE END INCLUDE */
 
 /** @addtogroup STM32_USB_OTG_DEVICE_LIBRARY
@@ -76,8 +75,8 @@
 /* USER CODE BEGIN PRIVATE_DEFINES */
 /* Define size for the receive and transmit buffer over CDC */
 /* It's up to user to redefine and/or remove those define */
-#define APP_RX_DATA_SIZE  RING_BUF_SIZE
-#define APP_TX_DATA_SIZE  RING_BUF_SIZE
+#define APP_RX_DATA_SIZE  2048
+#define APP_TX_DATA_SIZE  2048
 /* USER CODE END PRIVATE_DEFINES */
 /**
   * @}
@@ -99,24 +98,12 @@
 /* Create buffer for reception and transmission           */
 /* It's up to user to redefine and/or remove those define */
 /* Received Data over USB are stored in this buffer       */
-uint8_t UserRxBufferFS0[APP_RX_DATA_SIZE];
-uint8_t UserRxBufferFS1[APP_RX_DATA_SIZE];
+uint8_t UserRxBufferFS[APP_RX_DATA_SIZE];
 
 /* Send Data over USB CDC are stored in this buffer       */
-uint8_t UserTxBufferFS0[APP_TX_DATA_SIZE];
-uint8_t UserTxBufferFS1[APP_TX_DATA_SIZE];
+uint8_t UserTxBufferFS[APP_TX_DATA_SIZE];
 
 /* USER CODE BEGIN PRIVATE_VARIABLES */
-#pragma pack(push,1)
-typedef struct {
-  uint32_t speed;
-  uint8_t stop_bits;
-  uint8_t parity;
-  uint8_t bits;
-} t_CDC_LINE_CODING;
-#pragma pack(pop)
-
-uint8_t serial2usb_buffer[CDC_NUM];
 /* USER CODE END PRIVATE_VARIABLES */
 
 /**
@@ -128,9 +115,6 @@ uint8_t serial2usb_buffer[CDC_NUM];
   */
   extern USBD_HandleTypeDef hUsbDeviceFS;
 /* USER CODE BEGIN EXPORTED_VARIABLES */
-
-UART_HandleTypeDef *idx2usart[CDC_NUM];
-extern t_ring cdc2uart[];
 /* USER CODE END EXPORTED_VARIABLES */
 
 /**
@@ -142,11 +126,10 @@ extern t_ring cdc2uart[];
   */
 static int8_t CDC_Init_FS     (void);
 static int8_t CDC_DeInit_FS   (void);
-static int8_t CDC_Control_FS  (uint8_t idx, uint8_t cmd, uint8_t* pbuf, uint16_t length);
-static int8_t CDC_Receive_FS  (uint8_t idx, uint8_t* pbuf, uint32_t *Len);
+static int8_t CDC_Control_FS  (uint8_t cmd, uint8_t* pbuf, uint16_t length);
+static int8_t CDC_Receive_FS  (uint8_t* pbuf, uint32_t *Len);
 
 /* USER CODE BEGIN PRIVATE_FUNCTIONS_DECLARATION */
-
 /* USER CODE END PRIVATE_FUNCTIONS_DECLARATION */
 
 /**
@@ -172,16 +155,8 @@ static int8_t CDC_Init_FS(void)
 {
   /* USER CODE BEGIN 3 */
   /* Set Application Buffers */
-
-  idx2usart[0] = &huart1;
-  idx2usart[1] = &huart2;
-
-
-  USBD_CDC_SetTxBuffer(0,&hUsbDeviceFS, UserTxBufferFS0, 0);
-  USBD_CDC_SetRxBuffer(0,&hUsbDeviceFS, UserRxBufferFS0);
-
-  USBD_CDC_SetTxBuffer(1,&hUsbDeviceFS, UserTxBufferFS1, 0);
-  USBD_CDC_SetRxBuffer(1,&hUsbDeviceFS, UserRxBufferFS1);
+  USBD_CDC_SetTxBuffer(&hUsbDeviceFS, UserTxBufferFS, 0);
+  USBD_CDC_SetRxBuffer(&hUsbDeviceFS, UserRxBufferFS);
   return (USBD_OK);
   /* USER CODE END 3 */
 }
@@ -207,12 +182,9 @@ static int8_t CDC_DeInit_FS(void)
   * @param  length: Number of data to be sent (in bytes)
   * @retval Result of the operation: USBD_OK if all operations are OK else USBD_FAIL
   */
-static int8_t CDC_Control_FS  (uint8_t idx, uint8_t cmd, uint8_t* pbuf, uint16_t length)
+static int8_t CDC_Control_FS  (uint8_t cmd, uint8_t* pbuf, uint16_t length)
 {
   /* USER CODE BEGIN 5 */
-  t_CDC_LINE_CODING *line_coding = (t_CDC_LINE_CODING *)pbuf;
-  UART_HandleTypeDef *uart = idx2usart[idx];
-
   switch (cmd)
   {
   case CDC_SEND_ENCAPSULATED_COMMAND:
@@ -254,66 +226,6 @@ static int8_t CDC_Control_FS  (uint8_t idx, uint8_t cmd, uint8_t* pbuf, uint16_t
   /*******************************************************************************/
   case CDC_SET_LINE_CODING:
 
-    __HAL_UART_DISABLE_IT(uart, UART_IT_RXNE);
-    if (HAL_UART_GetState(uart) != HAL_UART_STATE_RESET)
-    {
-      HAL_UART_DeInit(uart);
-    }
-
-    uart->Init.BaudRate = line_coding->speed;
-
-    switch(line_coding->stop_bits) {
-      case 0:
-        uart->Init.StopBits = UART_STOPBITS_1;
-      break;
-
-      case 2:
-        uart->Init.StopBits = UART_STOPBITS_2;
-      break;
-
-      default:
-        uart->Init.StopBits = UART_STOPBITS_1;
-      break;
-    }
-
-    switch(line_coding->parity) {
-      case 0:
-        uart->Init.Parity = UART_PARITY_NONE;
-      break;
-
-      case 1:
-        uart->Init.Parity = UART_PARITY_ODD;
-      break;
-
-      case 2:
-        uart->Init.Parity = UART_PARITY_EVEN;
-      break;
-
-      default:
-        uart->Init.Parity = UART_PARITY_NONE;
-      break;
-
-    }
-
-
-    switch(line_coding->bits) {
-      case 8:
-        uart->Init.WordLength = UART_WORDLENGTH_8B;
-      break;
-
-      case 9:
-        uart->Init.WordLength = UART_WORDLENGTH_9B;
-      break;
-
-      default:
-      uart->Init.WordLength = UART_WORDLENGTH_8B;
-      break;
-    }
-
-    if (HAL_UART_Init(uart) == HAL_OK)
-    {
-      __HAL_UART_ENABLE_IT(uart, UART_IT_RXNE);
-    }
     break;
 
   case CDC_GET_LINE_CODING:
@@ -351,11 +263,11 @@ static int8_t CDC_Control_FS  (uint8_t idx, uint8_t cmd, uint8_t* pbuf, uint16_t
   * @param  Len: Number of data received (in bytes)
   * @retval Result of the operation: USBD_OK if all operations are OK else USBD_FAIL
   */
-static int8_t CDC_Receive_FS (uint8_t idx, uint8_t* Buf, uint32_t *Len)
+static int8_t CDC_Receive_FS (uint8_t* Buf, uint32_t *Len)
 {
   /* USER CODE BEGIN 6 */
-  ring_put_data(&cdc2uart[idx], Buf, *Len);
-  USBD_CDC_ReceivePacket(idx, &hUsbDeviceFS);
+  USBD_CDC_SetRxBuffer(&hUsbDeviceFS, &Buf[0]);
+  USBD_CDC_ReceivePacket(&hUsbDeviceFS);
   return (USBD_OK);
   /* USER CODE END 6 */
 }
@@ -371,33 +283,21 @@ static int8_t CDC_Receive_FS (uint8_t idx, uint8_t* Buf, uint32_t *Len)
   * @param  Len: Number of data to be send (in bytes)
   * @retval Result of the operation: USBD_OK if all operations are OK else USBD_FAIL or USBD_BUSY
   */
-uint8_t CDC_Transmit_FS(uint8_t idx, uint8_t* Buf, uint16_t Len)
+uint8_t CDC_Transmit_FS(uint8_t* Buf, uint16_t Len)
 {
   uint8_t result = USBD_OK;
   /* USER CODE BEGIN 7 */
   USBD_CDC_HandleTypeDef *hcdc = (USBD_CDC_HandleTypeDef*)hUsbDeviceFS.pClassData;
-  if (hcdc->cdc[idx].TxState != 0){
+  if (hcdc->TxState != 0){
     return USBD_BUSY;
   }
-  USBD_CDC_SetTxBuffer(idx,&hUsbDeviceFS, Buf, Len);
-  result = USBD_CDC_TransmitPacket(idx,&hUsbDeviceFS);
+  USBD_CDC_SetTxBuffer(&hUsbDeviceFS, Buf, Len);
+  result = USBD_CDC_TransmitPacket(&hUsbDeviceFS);
   /* USER CODE END 7 */
   return result;
 }
 
 /* USER CODE BEGIN PRIVATE_FUNCTIONS_IMPLEMENTATION */
-uint8_t CDC_Transmit_Ready(uint8_t idx) {
-  USBD_CDC_HandleTypeDef *hcdc = (USBD_CDC_HandleTypeDef*)hUsbDeviceFS.pClassData;
-  if (hcdc->cdc[idx].TxState != 0){
-    // busy
-    return 0;
-  }
-  return 1;
-}
-
-inline UART_HandleTypeDef * Index2Usart(uint8_t index) {
-  return idx2usart[index];
-}
 /* USER CODE END PRIVATE_FUNCTIONS_IMPLEMENTATION */
 
 /**

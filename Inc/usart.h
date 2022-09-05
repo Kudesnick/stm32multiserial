@@ -66,11 +66,7 @@ extern UART_HandleTypeDef huart2;
 extern UART_HandleTypeDef huart3;
 
 /* USER CODE BEGIN Private defines */
-__STATIC_INLINE uint8_t usart2idx(UART_HandleTypeDef *usart) {
-  if (usart->Instance == USART1) return 0;
-  if (usart->Instance == USART2) return 1;
-  return 0;
-}
+
 /* USER CODE END Private defines */
 
 extern void _Error_Handler(char *, int);
@@ -80,7 +76,7 @@ void MX_USART2_UART_Init(void);
 void MX_USART3_UART_Init(void);
 
 /* USER CODE BEGIN Prototypes */
-uint8_t HAL_UART_Transmit_DMA_Ready(UART_HandleTypeDef *huart);
+
 /* USER CODE END Prototypes */
 
 #ifdef __cplusplus

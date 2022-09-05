@@ -112,11 +112,9 @@ extern USBD_CDC_ItfTypeDef  USBD_Interface_fops_FS;
 /** @defgroup USBD_CDC_IF_Exported_FunctionsPrototype
   * @{
   */
-uint8_t CDC_Transmit_FS(uint8_t idx, uint8_t* Buf, uint16_t Len);
+uint8_t CDC_Transmit_FS(uint8_t* Buf, uint16_t Len);
 
 /* USER CODE BEGIN EXPORTED_FUNCTIONS */
-uint8_t CDC_Transmit_Ready(uint8_t idx);
-UART_HandleTypeDef * Index2Usart(uint8_t index);
 /* USER CODE END EXPORTED_FUNCTIONS */
 /**
   * @}
